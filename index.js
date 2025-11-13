@@ -43,71 +43,7 @@ async function run() {
     //post method
     //insertone
     //insertmany
-    app.get('/details/:id', async (req, res) => {
-      const { id } = req.params
 
-      const result = await itemsCollection.findOne({ _id: new ObjectId(id) })
-      res.send(result)
-    })
-
-    //top  6 data acquring
-    //get
-    //find
-      app.get('/top_rated-items', async (req, res) => {
-  const result = await itemsCollection
-//mongodb er data shob string e tai eta use korchi
-    .aggregate([
-      {
-        $addFields: {
-          star_rating_num: { $toDouble: "$star_rating" }
-        }
-      },
-      { $sort: { star_rating_num: -1 } }, 
-      { $limit: 6 }
-    ])
-    .toArray();
-
-  res.send(result);
-});
-//for search
-  app.get('/search',async(req,res)=>{
-    const sertext=req.query.search
-    const result=await itemsCollection.find({food_name:{$regex:sertext,$options:"i"}}).toArray()
-    res.send(result)
-  })
-
-    app.post('/details', async (req, res) => {
-      const data = req.body
-      const result = await itemsCollection.insertOne(data)
-      res.send(result)
-    })
-    //PUT deya method update kora
-
-    app.put('/items/:id',async(req,res)=>{
-      const {id}=req.params
-      const data=req.body
-      const objectId=new ObjectId(id)
-      const filter={_id:objectId}
-      const update={
-        $set:data
-      }
-      const result= await itemsCollection.updateOne(filter,update)
-      res.send(result)
-    })
-    //api for my review page
-    app.get('/my-reviews', async(req,res)=>{
-      const email=req.query.email
-      const result=await itemsCollection.find({user:email}).toArray()
-      res.send(result)
-    })
-    //delete function
-    app.delete('/details/:id',async(req,res)=>{
-      const {id}=req.params
-      const objectid=new ObjectId(id)
-      const filter={_id:objectid}
-      const result= await itemsCollection.deleteOne(filter)
-      res.send(result)
-    })
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
@@ -123,5 +59,5 @@ app.get('/', (req, res) => {
   res.send('Its ok bro')
 })
 app.listen(port, () => {
-  console.log( `simple crud server is running on port ${port}`)
+  console.log(`simple crud server is running on port ${port}`)
 })
