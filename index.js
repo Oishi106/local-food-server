@@ -43,7 +43,34 @@ async function run() {
     //post method
     //insertone
     //insertmany
+    app.get('/details/:id', async (req, res) => {
+      const { id } = req.params
 
+      const result = await itemsCollection.findOne({ _id: new ObjectId(id) })
+      res.send(result)
+    })
+
+    //top  6 data acquring
+    //get
+    //find
+    app.get('/top_rated-items', async (req, res) => {
+      const result = await itemsCollection
+        //mongodb er data shob string e tai eta use korchi
+        .aggregate([
+          {
+            $addFields: {
+              star_rating_num: { $toDouble: "$star_rating" }
+            }
+          },
+          { $sort: { star_rating_num: -1 } },
+          { $limit: 6 }
+        ])
+        .toArray();
+
+      res.send(result);
+    });
+    //for search
+  
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
