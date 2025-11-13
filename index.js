@@ -70,7 +70,19 @@ async function run() {
       res.send(result);
     });
     //for search
-  
+    app.get('/search', async (req, res) => {
+      const sertext = req.query.search
+      const result = await itemsCollection.find({ food_name: { $regex: sertext, $options: "i" } }).toArray()
+      res.send(result)
+    })
+
+    app.post('/details', async (req, res) => {
+      const data = req.body
+      const result = await itemsCollection.insertOne(data)
+      res.send(result)
+    })
+    
+   
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
