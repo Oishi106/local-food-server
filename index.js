@@ -82,8 +82,28 @@ async function run() {
       res.send(result)
     })
     
-   
+    //PUT deya method update kora
 
+    app.put('/items/:id', async (req, res) => {
+      const { id } = req.params
+      const data = req.body
+      const objectId = new ObjectId(id)
+      const filter = { _id: objectId }
+      const update = {
+        $set: data
+      }
+      const result = await itemsCollection.updateOne(filter, update)
+      res.send(result)
+    })
+    //api for my review page
+    app.get('/my-reviews', async (req, res) => {
+      const email = req.query.email
+      const result = await itemsCollection.find({ user: email }).toArray()
+      res.send(result)
+    })
+    //delete function
+
+    
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
