@@ -13,9 +13,11 @@
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
-    "express": "^5.1.0",
+    "express": "^5.2.1",
     "firebase": "^12.5.0",
-    "mongodb": "^6.20.0",
-    "mongodg": "^0.1.0"
+    "jsonwebtoken": "^9.0.3",
+    "mongodb": "^6.21.0",
+    "mongodg": "^0.1.0",
+    "stripe": "^22.1.1"
   }
 }
