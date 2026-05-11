@@ -15,7 +15,7 @@ app.use(
     origin: [
       "http://localhost:5173",
       "http://localhost:5174",
-      "https://your-deployed-frontend.com", // deployed URL হলে এখানে দাও
+      "https://local-food-client.vercel.app",
     ],
     credentials: true,
   })
@@ -66,7 +66,7 @@ async function run() {
     // AUTH API (JWT)
     // --------------------
     app.post("/jwt", (req, res) => {
-      const user = req.body; // { email }
+      const user = req.body;
       const token = jwt.sign(user, process.env.JWT_SECRET, {
         expiresIn: "7d",
       });
@@ -76,10 +76,8 @@ async function run() {
     // --------------------
     // USERS
     // --------------------
-
-    // Save user on first login (call this after Google/email login)
     app.post("/users", async (req, res) => {
-      const user = req.body; // { name, email, photoURL, role: "user" }
+      const user = req.body;
       const existing = await usersCollection.findOne({ email: user.email });
       if (existing) {
         return res.send({ message: "User already exists", inserted: false });
@@ -92,13 +90,11 @@ async function run() {
       res.send(result);
     });
 
-    // Get all users (admin only — add verifyToken + verifyAdmin if needed)
     app.get("/users", verifyToken, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
 
-    // Get single user role
     app.get("/users/role", verifyToken, async (req, res) => {
       const email = req.query.email;
       if (email !== req.user.email) {
@@ -108,7 +104,6 @@ async function run() {
       res.send({ role: user?.role || "user" });
     });
 
-    // Update user role (admin action)
     app.patch("/users/:id/role", verifyToken, async (req, res) => {
       const { id } = req.params;
       const { role } = req.body;
@@ -126,13 +121,11 @@ async function run() {
       res.send("Backend is running 🚀");
     });
 
-    // All food items
     app.get("/details", async (req, res) => {
       const result = await itemsCollection.find().toArray();
       res.send(result);
     });
 
-    // Single food item
     app.get("/details/:id", async (req, res) => {
       const { id } = req.params;
       const result = await itemsCollection.findOne({
@@ -141,7 +134,6 @@ async function run() {
       res.send(result);
     });
 
-    // Top rated items (for Home page)
     app.get("/top_rated-items", async (req, res) => {
       const result = await itemsCollection
         .aggregate([
@@ -157,7 +149,6 @@ async function run() {
       res.send(result);
     });
 
-    // Search
     app.get("/search", async (req, res) => {
       const searchText = req.query.search || "";
       const result = await itemsCollection
@@ -166,7 +157,6 @@ async function run() {
       res.send(result);
     });
 
-    // All reviews (public)
     app.get("/all-reviews", async (req, res) => {
       const result = await itemsCollection
         .find({})
@@ -181,26 +171,19 @@ async function run() {
     // --------------------
     app.get("/dashboard/overview", verifyToken, async (req, res) => {
       const userEmail = req.user.email;
-
-      // Check if admin
       const currentUser = await usersCollection.findOne({ email: userEmail });
       const isAdmin = currentUser?.role === "admin";
 
       if (isAdmin) {
-        // Admin metrics
         const totalBookings = await bookingsCollection.countDocuments();
         const totalServices = await itemsCollection.countDocuments();
         const totalUsers = await usersCollection.countDocuments();
 
-        // Revenue from bookings
         const revenueAgg = await bookingsCollection
-          .aggregate([
-            { $group: { _id: null, total: { $sum: "$amount" } } },
-          ])
+          .aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }])
           .toArray();
         const revenue = revenueAgg[0]?.total || 0;
 
-        // Chart data: last 6 months booking counts
         const sixMonthsAgo = new Date();
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
@@ -218,7 +201,7 @@ async function run() {
           ])
           .toArray();
 
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
         const chartData = bookingsByMonth.map((m) => ({
           label: monthNames[m._id - 1],
           bookings: m.bookings,
@@ -235,7 +218,6 @@ async function run() {
           chartData,
         });
       } else {
-        // User metrics
         const myBookings = await bookingsCollection.countDocuments({ userEmail });
         const myReviews = await itemsCollection.countDocuments({ user: userEmail });
 
@@ -248,7 +230,6 @@ async function run() {
         const amountSpent = paymentsAgg[0]?.total || 0;
         const paymentCount = paymentsAgg[0]?.count || 0;
 
-        // User's booking chart
         const myBookingList = await bookingsCollection
           .find({ userEmail })
           .sort({ createdAt: -1 })
@@ -276,8 +257,6 @@ async function run() {
     // --------------------
     // BOOKINGS (CRUD)
     // --------------------
-
-    // All bookings (admin) or user's bookings
     app.get("/bookings", verifyToken, async (req, res) => {
       const { email } = req.query;
       const currentUser = await usersCollection.findOne({ email: req.user.email });
@@ -285,7 +264,6 @@ async function run() {
 
       let query = {};
       if (!isAdmin) {
-        // Regular user — only their own bookings
         if (email !== req.user.email) {
           return res.status(403).send({ message: "Forbidden" });
         }
@@ -299,7 +277,6 @@ async function run() {
       res.send(result);
     });
 
-    // Create booking
     app.post("/bookings", verifyToken, async (req, res) => {
       const booking = req.body;
       const result = await bookingsCollection.insertOne({
@@ -311,10 +288,8 @@ async function run() {
       res.send(result);
     });
 
-    // Delete booking
     app.delete("/bookings/:id", verifyToken, async (req, res) => {
       const { id } = req.params;
-      // Make sure the booking belongs to the user (or admin)
       const booking = await bookingsCollection.findOne({ _id: new ObjectId(id) });
       const currentUser = await usersCollection.findOne({ email: req.user.email });
       const isAdmin = currentUser?.role === "admin";
@@ -327,7 +302,6 @@ async function run() {
       res.send(result);
     });
 
-    // Update booking status (admin)
     app.patch("/bookings/:id", verifyToken, async (req, res) => {
       const { id } = req.params;
       const { status } = req.body;
@@ -341,8 +315,6 @@ async function run() {
     // --------------------
     // FOOD ITEMS (CRUD)
     // --------------------
-
-    // Add food item
     app.post("/details", verifyToken, async (req, res) => {
       const data = req.body;
       const result = await itemsCollection.insertOne({
@@ -352,7 +324,6 @@ async function run() {
       res.send(result);
     });
 
-    // Update food item
     app.put("/items/:id", verifyToken, async (req, res) => {
       const { id } = req.params;
       const data = req.body;
@@ -363,7 +334,6 @@ async function run() {
       res.send(result);
     });
 
-    // Delete food item (admin)
     app.delete("/details/:id", verifyToken, async (req, res) => {
       const { id } = req.params;
       const result = await itemsCollection.deleteOne({
@@ -397,7 +367,7 @@ async function run() {
     });
 
     // --------------------
-    // FOODS alias (frontend uses /foods)
+    // FOODS alias
     // --------------------
     app.get("/foods", async (req, res) => {
       const result = await itemsCollection.find().toArray();
